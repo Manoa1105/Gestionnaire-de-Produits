@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.text.*?>
+
+<BorderPane fx:controller="controller.MainController"
+            xmlns:fx="http://javafx.com/fxml"
+            prefWidth="1300" prefHeight="800"
+            styleClass="main-background">
+
+    <!-- ===== Sidebar Gauche ===== -->
+    <left>
+        <VBox spacing="20" styleClass="sidebar">
+            <Label text="☰" style="-fx-font-size: 24px; -fx-text-fill: white;" />
+            <Button text="Accueil" styleClass="sidebar-button"/>
+            <Button text="Produits" styleClass="sidebar-button"/>
+        </VBox>
+    </left>
+
+    <!-- ===== Contenu Principal ===== -->
+    <center>
+        <VBox spacing="15" VBox.vgrow="ALWAYS" styleClass="fade-in">
+            <padding>
+                <Insets top="20" right="20" bottom="20" left="20"/>
+            </padding>
+
+            <!-- 🔍 Zone de Recherche & Filtres -->
+            <HBox spacing="10">
+                <TextField fx:id="txtRecherche" promptText="Rechercher un produit..." HBox.hgrow="ALWAYS" styleClass="text-field"/>
+                <ComboBox fx:id="comboFiltre" promptText="Filtrer par catégorie" styleClass="combo-box"/>
+                <Button text="Réinitialiser" onAction="#reinitialiserFiltres" styleClass="btn-secondary"/>
+            </HBox>
+
+            <!-- 📋 TableView Produits -->
+            <TableView fx:id="tableProduits" VBox.vgrow="ALWAYS" styleClass="table">
+                <columns>
+                    <TableColumn fx:id="colNom" text="Nom" prefWidth="200"/>
+                    <TableColumn fx:id="colCategorie" text="Catégorie" prefWidth="200"/>
+                    <TableColumn fx:id="colPrix" text="Prix" prefWidth="120"/>
+                    <TableColumn fx:id="colQuantite" text="Quantité" prefWidth="120"/>
+                    <TableColumn fx:id="colFournisseur" text="Fournisseur" prefWidth="200"/>
+                </columns>
+            </TableView>
+
+            <!-- 💰 Label Valeur Stock -->
+            <Label fx:id="labelValeurStock" text="Valeur du stock : 0 Ar" styleClass="total-label"/>
+
+            <!-- ➕ Boutons Action -->
+            <HBox spacing="10" alignment="CENTER_RIGHT">
+                <Button text="Ajouter" onAction="#ajouterProduit" styleClass="btn-secondary"/>
+                <Button text="Modifier" onAction="#modifierProduit" styleClass="btn-primary"/>
+                <Button text="Supprimer" onAction="#supprimerProduit" styleClass="btn-danger"/>
+            </HBox>
+        </VBox>
+    </center>
+</BorderPane>

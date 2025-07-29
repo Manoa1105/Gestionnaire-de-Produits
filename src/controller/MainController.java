@@ -1,159 +1,178 @@
 package controller;
 
-import javafx.beans.binding.Bindings;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.collections.transformation.FilteredList;
-import javafx.collections.transformation.SortedList;
-import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
-import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.StackPane;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import model.Produit;
-import service.ProduitService;
-import util.Utils;
+
+import java.io.IOException;
+import java.util.Optional;
 
 public class MainController {
 
-    // 🎯 Lien avec la table et ses colonnes
     @FXML private TableView<Produit> tableProduits;
     @FXML private TableColumn<Produit, String> colNom;
     @FXML private TableColumn<Produit, String> colCategorie;
     @FXML private TableColumn<Produit, Double> colPrix;
     @FXML private TableColumn<Produit, Integer> colQuantite;
+    @FXML private TableColumn<Produit, String> colFournisseur;
 
-    // 🧾 Champs du formulaire
-    @FXML private TextField txtNom;
-    @FXML private ComboBox<String> comboCategorie;
-    @FXML private TextField txtPrix;
-    @FXML private TextField txtQuantite;
-
+    @FXML private TextField txtRecherche;
     @FXML private ComboBox<String> comboFiltre;
-    @FXML private Label lblValeurStock;
-    @FXML private Label notificationLabel;
+    @FXML private Label labelValeurStock;
 
-    @FXML private StackPane rootPane; // Utilisé plus tard pour animations/modales
+    @FXML private StackPane rootPane; // pour snackbar si utilisé
 
-    // 📦 Données
-    private final ObservableList<Produit> produits = FXCollections.observableArrayList();
-    private final ProduitService service = new ProduitService(); // En vue d'une extension
+    private ObservableList<Produit> produits = FXCollections.observableArrayList();
 
-    // 🔁 Initialisation
+    @FXML
     public void initialize() {
-        // 🧠 Lier les colonnes avec les attributs de Produit
-        colNom.setCellValueFactory(new PropertyValueFactory<>("nom"));
-        colCategorie.setCellValueFactory(new PropertyValueFactory<>("categorie"));
-        colPrix.setCellValueFactory(new PropertyValueFactory<>("prix"));
-        colQuantite.setCellValueFactory(new PropertyValueFactory<>("quantite"));
+        // Initialisation des colonnes
+        colNom.setCellValueFactory(data -> data.getValue().nomProperty());
+        colCategorie.setCellValueFactory(data -> data.getValue().categorieProperty());
+        colPrix.setCellValueFactory(data -> data.getValue().prixProperty().asObject());
+        colQuantite.setCellValueFactory(data -> data.getValue().quantiteProperty().asObject());
+        colFournisseur.setCellValueFactory(data -> data.getValue().fournisseurProperty());
 
-        // 🧪 Données de démonstration
-        produits.addAll(
-                new Produit("Ordinateur", "Électronique", 2500.0, 5),
-                new Produit("Shampoing", "Hygiène", 20.0, 10)
-        );
+        tableProduits.setItems(produits);
+        mettreAJourValeurStock(); // ✅ Mise à jour initiale
 
-        // 📋 Remplissage des catégories dans ComboBox
-        ObservableList<String> categories = FXCollections.observableArrayList(
-                "Électronique", "Vêtements", "Alimentaire", "Maison", "Hygiène", "Loisirs"
-        );
-        comboCategorie.setItems(categories);
-        comboFiltre.setItems(categories);
+        // Initialiser filtre catégorie
+        comboFiltre.setItems(FXCollections.observableArrayList(
+                "Liant", "Acier", "Granulat", "Ciment", "Bois", "Divers"
+        ));
 
-        // 🔍 Filtrage dynamique par catégorie
-        FilteredList<Produit> filteredData = new FilteredList<>(produits, p -> true);
-        comboFiltre.valueProperty().addListener((obs, oldVal, newVal) -> {
-            filteredData.setPredicate(produit -> {
-                if (newVal == null || newVal.isEmpty()) return true;
-                return produit.getCategorie().equalsIgnoreCase(newVal);
-            });
+        // 🔍 Filtrage live
+        txtRecherche.textProperty().addListener((obs, oldVal, newVal) -> {
+            filtrerProduits();
         });
-
-        // 🔃 Tri automatique
-        SortedList<Produit> sortedData = new SortedList<>(filteredData);
-        sortedData.comparatorProperty().bind(tableProduits.comparatorProperty());
-        tableProduits.setItems(sortedData);
-
-        // 💰 Calcul de la valeur totale du stock
-        lblValeurStock.textProperty().bind(Bindings.createStringBinding(() ->
-                "Valeur totale : " + Utils.calculerValeurTotale(produits) + " Ar", produits));
+        comboFiltre.setOnAction(e -> filtrerProduits());
     }
 
-    // ➕ Ajouter un produit
-    @FXML
-    public void ajouterProduit(ActionEvent event) {
-        if (Utils.validerChamps(txtNom, comboCategorie, txtPrix, txtQuantite)) {
-            try {
-                Produit p = new Produit(
-                        txtNom.getText(),
-                        comboCategorie.getValue(),
-                        Double.parseDouble(txtPrix.getText()),
-                        Integer.parseInt(txtQuantite.getText())
-                );
-                produits.add(p);
-                Utils.notifier(notificationLabel, "✅ Produit ajouté !");
-                Utils.viderChamps(txtNom, comboCategorie, txtPrix, txtQuantite);
-            } catch (NumberFormatException e) {
-                Utils.notifier(notificationLabel, "⚠️ Prix ou quantité non valide.");
-            }
-        }
+    private void filtrerProduits() {
+        String recherche = txtRecherche.getText().toLowerCase().trim();
+        String filtreCategorie = comboFiltre.getValue();
+
+        tableProduits.setItems(produits.filtered(p -> {
+            boolean correspond = p.getNom().toLowerCase().contains(recherche) ||
+                    p.getFournisseur().toLowerCase().contains(recherche);
+            boolean categorieMatch = (filtreCategorie == null || filtreCategorie.isEmpty()) ||
+                    filtreCategorie.equalsIgnoreCase(p.getCategorie());
+            return correspond && categorieMatch;
+        }));
     }
 
-    // ✏️ Modifier un produit
     @FXML
-    public void modifierProduit(ActionEvent event) {
-        Produit selection = tableProduits.getSelectionModel().getSelectedItem();
-        if (selection != null && Utils.validerChamps(txtNom, comboCategorie, txtPrix, txtQuantite)) {
-            try {
-                selection.setNom(txtNom.getText());
-                selection.setCategorie(comboCategorie.getValue());
-                selection.setPrix(Double.parseDouble(txtPrix.getText()));
-                selection.setQuantite(Integer.parseInt(txtQuantite.getText()));
-                tableProduits.refresh();
-                Utils.notifier(notificationLabel, "✏️ Produit modifié !");
-                Utils.viderChamps(txtNom, comboCategorie, txtPrix, txtQuantite);
-            } catch (NumberFormatException e) {
-                Utils.notifier(notificationLabel, "⚠️ Prix ou quantité non valide.");
-            }
-        } else {
-            Utils.notifier(notificationLabel, "⚠️ Sélectionnez un produit à modifier.");
-        }
+    private void reinitialiserFiltres() {
+        txtRecherche.clear();
+        comboFiltre.getSelectionModel().clearSelection();
+        tableProduits.setItems(produits);
     }
 
-    // 🗑️ Supprimer un produit
     @FXML
-    public void supprimerProduit(ActionEvent event) {
+    private void ajouterProduit() {
+        ouvrirFormulaire(null);
+    }
+
+    @FXML
+    private void modifierProduit() {
         Produit selection = tableProduits.getSelectionModel().getSelectedItem();
         if (selection != null) {
-            produits.remove(selection);
-            Utils.notifier(notificationLabel, "🗑️ Produit supprimé.");
+            ouvrirFormulaire(selection);
         } else {
-            Utils.notifier(notificationLabel, "⚠️ Aucun produit sélectionné.");
+            showAlert("Veuillez sélectionner un produit à modifier.");
         }
     }
+
     @FXML
-    public void confirmerSuppression(ActionEvent event) {
-        Produit selection = tableProduits.getSelectionModel().getSelectedItem();
-        if (selection != null) {
-            // Boîte de confirmation
-            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-            alert.setTitle("Confirmation de suppression");
-            alert.setHeaderText("Voulez-vous vraiment supprimer ce produit ?");
-            alert.setContentText("Produit : " + selection.getNom());
+    private void supprimerProduit() {
+        Produit produit = tableProduits.getSelectionModel().getSelectedItem();
+        if (produit == null) {
+            showAlert("Aucun produit sélectionné.");
+            return;
+        }
 
-            ButtonType oui = new ButtonType("Oui");
-            ButtonType non = new ButtonType("Non");
-            alert.getButtonTypes().setAll(oui, non);
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Confirmation");
+        confirm.setHeaderText("Supprimer ce produit ?");
+        confirm.setContentText(produit.getNom());
 
-            alert.showAndWait().ifPresent(response -> {
-                if (response == oui) {
-                    produits.remove(selection);
-                    Utils.notifier(notificationLabel, "🗑️ Produit supprimé.");
+        Optional<ButtonType> result = confirm.showAndWait();
+        if (result.isPresent() && result.get() == ButtonType.OK) {
+            produits.remove(produit);
+            tableProduits.refresh();
+            mettreAJourValeurStock(); // ✅ Mise à jour après suppression
+            showSnackbar("Produit supprimé.");
+        }
+    }
+
+    private void ouvrirFormulaire(Produit produitExistant) {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/view/ProduitForm.fxml"));
+            Parent root = loader.load();
+
+            ProduitFormController controller = loader.getController();
+            controller.initialiser(new ProduitFormController.FormCallback() {
+                @Override
+                public void onProduitAjoute(Produit produit) {
+                    produits.add(produit);
+                    tableProduits.refresh();
+                    mettreAJourValeurStock(); // ✅ après ajout
+                    showSnackbar("Produit ajouté avec succès !");
                 }
-            });
-        } else {
-            Utils.notifier(notificationLabel, "⚠️ Aucun produit sélectionné.");
+
+                @Override
+                public void onProduitModifie() {
+                    tableProduits.refresh();
+                    mettreAJourValeurStock(); // ✅ après modification
+                    showSnackbar("Produit modifié avec succès !");
+                }
+            }, produitExistant);
+
+            Stage modal = new Stage();
+            modal.setScene(new Scene(root));
+            modal.initModality(Modality.APPLICATION_MODAL);
+            modal.setTitle(produitExistant != null ? "Modifier Produit" : "Ajouter Produit");
+            modal.showAndWait();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            showAlert("Erreur lors de l'ouverture du formulaire.");
         }
     }
 
+    private void mettreAJourValeurStock() {
+        double total = 0;
+        for (Produit p : produits) {
+            total += p.getPrix() * p.getQuantite();
+        }
+        labelValeurStock.setText("Valeur du stock : " + String.format("%.0f", total) + " Ar");
+    }
+
+    private void showAlert(String message) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Information");
+        alert.setContentText(message);
+        alert.showAndWait();
+    }
+
+    private void showSnackbar(String message) {
+        if (rootPane == null) return;
+        Label msg = new Label(message);
+        msg.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-padding: 10; -fx-background-radius: 5;");
+        rootPane.getChildren().add(msg);
+        new Thread(() -> {
+            try {
+                Thread.sleep(2000);
+            } catch (InterruptedException ignored) {}
+            javafx.application.Platform.runLater(() -> rootPane.getChildren().remove(msg));
+        }).start();
+    }
 }
