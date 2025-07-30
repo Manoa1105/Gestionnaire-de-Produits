@@ -3,8 +3,9 @@ package controller;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.scene.chart.*;
 import javafx.scene.control.*;
-import javafx.scene.layout.StackPane;
+import javafx.scene.layout.*;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.fxml.FXMLLoader;
@@ -13,9 +14,20 @@ import javafx.scene.Scene;
 import model.Produit;
 
 import java.io.IOException;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class MainController {
+
+    @FXML private TabPane tabPane;
+
+    @FXML private Label labelNbProduits;
+    @FXML private Label labelValeurTotale;
+    @FXML private Label labelTopCategorie;
+    @FXML private Label labelTopFournisseur;
+
+    @FXML private PieChart pieChartCategories;
+    @FXML private BarChart<String, Number> barChartFournisseurs;
 
     @FXML private TableView<Produit> tableProduits;
     @FXML private TableColumn<Produit, String> colNom;
@@ -27,14 +39,16 @@ public class MainController {
     @FXML private TextField txtRecherche;
     @FXML private ComboBox<String> comboFiltre;
     @FXML private Label labelValeurStock;
+    @FXML private StackPane rootPane;
 
-    @FXML private StackPane rootPane; // pour snackbar si utilisé
+    @FXML private Button btnBasculeVue;
+    @FXML private ScrollPane scrollGrille;
+    @FXML private FlowPane grilleProduits;
 
     private ObservableList<Produit> produits = FXCollections.observableArrayList();
 
     @FXML
     public void initialize() {
-        // Initialisation des colonnes
         colNom.setCellValueFactory(data -> data.getValue().nomProperty());
         colCategorie.setCellValueFactory(data -> data.getValue().categorieProperty());
         colPrix.setCellValueFactory(data -> data.getValue().prixProperty().asObject());
@@ -42,18 +56,24 @@ public class MainController {
         colFournisseur.setCellValueFactory(data -> data.getValue().fournisseurProperty());
 
         tableProduits.setItems(produits);
-        mettreAJourValeurStock(); // ✅ Mise à jour initiale
+        mettreAJourValeurStock();
+        mettreAJourDashboard();
 
-        // Initialiser filtre catégorie
         comboFiltre.setItems(FXCollections.observableArrayList(
                 "Liant", "Acier", "Granulat", "Ciment", "Bois", "Divers"
         ));
 
-        // 🔍 Filtrage live
-        txtRecherche.textProperty().addListener((obs, oldVal, newVal) -> {
-            filtrerProduits();
-        });
+        txtRecherche.textProperty().addListener((obs, oldVal, newVal) -> filtrerProduits());
         comboFiltre.setOnAction(e -> filtrerProduits());
+    }
+
+    @FXML private void afficherAccueil() {
+        tabPane.getSelectionModel().select(0);
+        mettreAJourDashboard();
+    }
+
+    @FXML private void afficherProduits() {
+        tabPane.getSelectionModel().select(1);
     }
 
     private void filtrerProduits() {
@@ -61,28 +81,26 @@ public class MainController {
         String filtreCategorie = comboFiltre.getValue();
 
         tableProduits.setItems(produits.filtered(p -> {
-            boolean correspond = p.getNom().toLowerCase().contains(recherche) ||
-                    p.getFournisseur().toLowerCase().contains(recherche);
-            boolean categorieMatch = (filtreCategorie == null || filtreCategorie.isEmpty()) ||
-                    filtreCategorie.equalsIgnoreCase(p.getCategorie());
+            boolean correspond = p.getNom().toLowerCase().contains(recherche)
+                    || p.getFournisseur().toLowerCase().contains(recherche);
+            boolean categorieMatch = (filtreCategorie == null || filtreCategorie.isEmpty())
+                    || filtreCategorie.equalsIgnoreCase(p.getCategorie());
             return correspond && categorieMatch;
         }));
     }
 
-    @FXML
-    private void reinitialiserFiltres() {
+    @FXML private void reinitialiserFiltres() {
         txtRecherche.clear();
         comboFiltre.getSelectionModel().clearSelection();
         tableProduits.setItems(produits);
+        if (scrollGrille.isVisible()) afficherGrilleProduits();
     }
 
-    @FXML
-    private void ajouterProduit() {
+    @FXML private void ajouterProduit() {
         ouvrirFormulaire(null);
     }
 
-    @FXML
-    private void modifierProduit() {
+    @FXML private void modifierProduit() {
         Produit selection = tableProduits.getSelectionModel().getSelectedItem();
         if (selection != null) {
             ouvrirFormulaire(selection);
@@ -91,8 +109,7 @@ public class MainController {
         }
     }
 
-    @FXML
-    private void supprimerProduit() {
+    @FXML private void supprimerProduit() {
         Produit produit = tableProduits.getSelectionModel().getSelectedItem();
         if (produit == null) {
             showAlert("Aucun produit sélectionné.");
@@ -108,7 +125,9 @@ public class MainController {
         if (result.isPresent() && result.get() == ButtonType.OK) {
             produits.remove(produit);
             tableProduits.refresh();
-            mettreAJourValeurStock(); // ✅ Mise à jour après suppression
+            mettreAJourValeurStock();
+            mettreAJourDashboard();
+            if (scrollGrille.isVisible()) afficherGrilleProduits();
             showSnackbar("Produit supprimé.");
         }
     }
@@ -124,14 +143,18 @@ public class MainController {
                 public void onProduitAjoute(Produit produit) {
                     produits.add(produit);
                     tableProduits.refresh();
-                    mettreAJourValeurStock(); // ✅ après ajout
+                    mettreAJourValeurStock();
+                    mettreAJourDashboard();
+                    if (scrollGrille.isVisible()) afficherGrilleProduits();
                     showSnackbar("Produit ajouté avec succès !");
                 }
 
                 @Override
                 public void onProduitModifie() {
                     tableProduits.refresh();
-                    mettreAJourValeurStock(); // ✅ après modification
+                    mettreAJourValeurStock();
+                    mettreAJourDashboard();
+                    if (scrollGrille.isVisible()) afficherGrilleProduits();
                     showSnackbar("Produit modifié avec succès !");
                 }
             }, produitExistant);
@@ -149,11 +172,89 @@ public class MainController {
     }
 
     private void mettreAJourValeurStock() {
-        double total = 0;
-        for (Produit p : produits) {
-            total += p.getPrix() * p.getQuantite();
-        }
+        double total = produits.stream().mapToDouble(p -> p.getPrix() * p.getQuantite()).sum();
         labelValeurStock.setText("Valeur du stock : " + String.format("%.0f", total) + " Ar");
+    }
+
+    private void mettreAJourDashboard() {
+        labelNbProduits.setText("Nombre total de produits : " + produits.size());
+
+        double total = produits.stream().mapToDouble(p -> p.getPrix() * p.getQuantite()).sum();
+        labelValeurTotale.setText("Valeur totale du stock : " + String.format("%.0f", total) + " Ar");
+
+        String topCat = produits.stream()
+                .collect(Collectors.groupingBy(Produit::getCategorie, Collectors.counting()))
+                .entrySet().stream()
+                .max(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey).orElse("-");
+        labelTopCategorie.setText("Catégorie la plus fréquente : " + topCat);
+
+        String topFourn = produits.stream()
+                .collect(Collectors.groupingBy(Produit::getFournisseur, Collectors.counting()))
+                .entrySet().stream()
+                .max(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey).orElse("-");
+        labelTopFournisseur.setText("Fournisseur principal : " + topFourn);
+
+        mettreAJourPieChart();
+        mettreAJourBarChart();
+    }
+
+    private void mettreAJourPieChart() {
+        if (pieChartCategories == null) return;
+        pieChartCategories.getData().clear();
+        Map<String, Long> repartition = produits.stream()
+                .collect(Collectors.groupingBy(Produit::getCategorie, Collectors.counting()));
+        repartition.forEach((categorie, count) -> {
+            pieChartCategories.getData().add(new PieChart.Data(categorie, count));
+        });
+    }
+
+    private void mettreAJourBarChart() {
+        if (barChartFournisseurs == null) return;
+        barChartFournisseurs.getData().clear();
+        Map<String, Integer> parFournisseur = produits.stream()
+                .collect(Collectors.groupingBy(Produit::getFournisseur,
+                        Collectors.summingInt(Produit::getQuantite)));
+
+        XYChart.Series<String, Number> serie = new XYChart.Series<>();
+        parFournisseur.forEach((fournisseur, quantite) -> {
+            serie.getData().add(new XYChart.Data<>(fournisseur, quantite));
+        });
+
+        barChartFournisseurs.getData().add(serie);
+    }
+
+    @FXML
+    private void basculerVue() {
+        boolean enGrille = scrollGrille.isVisible();
+        scrollGrille.setVisible(!enGrille);
+        tableProduits.setVisible(enGrille);
+        btnBasculeVue.setText(enGrille ? "🔁 Vue Grille" : "🔁 Vue Tableau");
+
+        if (!enGrille) {
+            afficherGrilleProduits();
+        }
+    }
+
+    private void afficherGrilleProduits() {
+        grilleProduits.getChildren().clear();
+        for (Produit p : produits) {
+            VBox carte = new VBox(8);
+            carte.getStyleClass().add("carte-produit");
+            carte.setPrefWidth(220);
+
+            Label nom = new Label("🧱 " + p.getNom());
+            nom.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
+
+            Label prix = new Label("💰 " + p.getPrix() + " Ar");
+            Label quantite = new Label("📦 " + p.getQuantite() + " unités");
+            Label categorie = new Label("🏷️ " + p.getCategorie());
+            Label fournisseur = new Label("🚚 " + p.getFournisseur());
+
+            carte.getChildren().addAll(nom, prix, quantite, categorie, fournisseur);
+            grilleProduits.getChildren().add(carte);
+        }
     }
 
     private void showAlert(String message) {

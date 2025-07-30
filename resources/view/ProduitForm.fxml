@@ -4,10 +4,13 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<AnchorPane xmlns:fx="http://javafx.com/fxml"
-            fx:controller="controller.ProduitFormController"
-            prefWidth="400" prefHeight="400"
-            styleClass="form-container"> <!-- ✅ AJOUTÉ -->
+<StackPane fx:id="formRoot"
+           xmlns:fx="http://javafx.com/fxml"
+           fx:controller="controller.ProduitFormController"
+           prefWidth="400" prefHeight="400"
+           styleClass="form-container">
+
+<!-- ✅ AJOUTÉ -->
 
     <VBox spacing="15" alignment="CENTER_LEFT">
         <Label text="Formulaire Produit" styleClass="form-title" />
@@ -27,4 +30,4 @@
                     styleClass="btn-primary" />
         </HBox>
     </VBox>
-</AnchorPane>
+</StackPane>

@@ -3,56 +3,102 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.geometry.Insets?>
-<?import javafx.scene.text.*?>
+<?import javafx.scene.chart.*?>
 
 <BorderPane fx:controller="controller.MainController"
             xmlns:fx="http://javafx.com/fxml"
             prefWidth="1300" prefHeight="800"
             styleClass="main-background">
 
-    <!-- ===== Sidebar Gauche ===== -->
+    <!-- ===== Barre latérale ===== -->
     <left>
         <VBox spacing="20" styleClass="sidebar">
             <Label text="☰" style="-fx-font-size: 24px; -fx-text-fill: white;" />
-            <Button text="Accueil" styleClass="sidebar-button"/>
-            <Button text="Produits" styleClass="sidebar-button"/>
+            <Button text="🏠 Accueil" onAction="#afficherAccueil" styleClass="sidebar-button"/>
+            <Button text="📦 Produits" onAction="#afficherProduits" styleClass="sidebar-button"/>
         </VBox>
     </left>
 
-    <!-- ===== Contenu Principal ===== -->
+    <!-- ===== Contenu principal ===== -->
     <center>
-        <VBox spacing="15" VBox.vgrow="ALWAYS" styleClass="fade-in">
-            <padding>
-                <Insets top="20" right="20" bottom="20" left="20"/>
-            </padding>
+        <StackPane fx:id="rootPane">
+            <TabPane fx:id="tabPane" tabClosingPolicy="UNAVAILABLE">
 
-            <!-- 🔍 Zone de Recherche & Filtres -->
-            <HBox spacing="10">
-                <TextField fx:id="txtRecherche" promptText="Rechercher un produit..." HBox.hgrow="ALWAYS" styleClass="text-field"/>
-                <ComboBox fx:id="comboFiltre" promptText="Filtrer par catégorie" styleClass="combo-box"/>
-                <Button text="Réinitialiser" onAction="#reinitialiserFiltres" styleClass="btn-secondary"/>
-            </HBox>
+                <!-- ===== Onglet Accueil ===== -->
+                <Tab text="🏠 Accueil">
+                    <VBox spacing="20" alignment="TOP_LEFT">
+                        <padding>
+                            <Insets top="20" right="20" bottom="20" left="20"/>
+                        </padding>
 
-            <!-- 📋 TableView Produits -->
-            <TableView fx:id="tableProduits" VBox.vgrow="ALWAYS" styleClass="table">
-                <columns>
-                    <TableColumn fx:id="colNom" text="Nom" prefWidth="200"/>
-                    <TableColumn fx:id="colCategorie" text="Catégorie" prefWidth="200"/>
-                    <TableColumn fx:id="colPrix" text="Prix" prefWidth="120"/>
-                    <TableColumn fx:id="colQuantite" text="Quantité" prefWidth="120"/>
-                    <TableColumn fx:id="colFournisseur" text="Fournisseur" prefWidth="200"/>
-                </columns>
-            </TableView>
+                        <Label text="Dashboard - Vue d’ensemble" styleClass="form-title"/>
+                        <Label fx:id="labelNbProduits" text="Nombre total de produits : 0" />
+                        <Label fx:id="labelValeurTotale" text="Valeur totale du stock : 0 Ar" />
+                        <Label fx:id="labelTopCategorie" text="Catégorie la plus fréquente : -" />
+                        <Label fx:id="labelTopFournisseur" text="Fournisseur principal : -" />
 
-            <!-- 💰 Label Valeur Stock -->
-            <Label fx:id="labelValeurStock" text="Valeur du stock : 0 Ar" styleClass="total-label"/>
+                        <HBox spacing="30">
+                            <!-- 🎯 Répartition par catégorie -->
+                            <VBox spacing="10">
+                                <Label text="Répartition par catégorie" />
+                                <PieChart fx:id="pieChartCategories" prefWidth="400" prefHeight="300"/>
+                            </VBox>
 
-            <!-- ➕ Boutons Action -->
-            <HBox spacing="10" alignment="CENTER_RIGHT">
-                <Button text="Ajouter" onAction="#ajouterProduit" styleClass="btn-secondary"/>
-                <Button text="Modifier" onAction="#modifierProduit" styleClass="btn-primary"/>
-                <Button text="Supprimer" onAction="#supprimerProduit" styleClass="btn-danger"/>
-            </HBox>
-        </VBox>
+                            <!-- 📊 Volume par fournisseur -->
+                            <VBox spacing="10">
+                                <Label text="Stock par fournisseur" />
+                                <BarChart fx:id="barChartFournisseurs" prefWidth="500" prefHeight="300"
+                                          title="Quantité totale par fournisseur">
+                                    <xAxis>
+                                        <CategoryAxis label="Fournisseur"/>
+                                    </xAxis>
+                                    <yAxis>
+                                        <NumberAxis label="Quantité"/>
+                                    </yAxis>
+                                </BarChart>
+                            </VBox>
+                        </HBox>
+                    </VBox>
+                </Tab>
+
+                <!-- ===== Onglet Produits ===== -->
+                <Tab text="📦 Produits">
+                    <VBox spacing="15" VBox.vgrow="ALWAYS" styleClass="fade-in">
+                        <padding>
+                            <Insets top="20" right="20" bottom="20" left="20"/>
+                        </padding>
+
+                        <!-- 🔍 Recherche et filtre -->
+                        <HBox spacing="10">
+                            <TextField fx:id="txtRecherche" promptText="Rechercher un produit..." HBox.hgrow="ALWAYS" styleClass="text-field"/>
+                            <ComboBox fx:id="comboFiltre" promptText="Filtrer par catégorie" styleClass="combo-box"/>
+                            <Button text="Réinitialiser" onAction="#reinitialiserFiltres" styleClass="btn-secondary"/>
+                        </HBox>
+
+                        <!-- 📋 Tableau des produits -->
+                        <TableView fx:id="tableProduits" VBox.vgrow="ALWAYS" styleClass="table">
+                            <columns>
+                                <TableColumn fx:id="colNom" text="Nom" prefWidth="200"/>
+                                <TableColumn fx:id="colCategorie" text="Catégorie" prefWidth="200"/>
+                                <TableColumn fx:id="colPrix" text="Prix" prefWidth="120"/>
+                                <TableColumn fx:id="colQuantite" text="Quantité" prefWidth="120"/>
+                                <TableColumn fx:id="colFournisseur" text="Fournisseur" prefWidth="200"/>
+                            </columns>
+                        </TableView>
+
+                        <!-- 💰 Valeur totale -->
+                        <Label fx:id="labelValeurStock" text="Valeur du stock : 0 Ar" styleClass="total-label"/>
+
+                        <!-- 🛠 Boutons actions -->
+                        <HBox spacing="10" alignment="CENTER_RIGHT">
+                            <Button text="Ajouter" onAction="#ajouterProduit" styleClass="btn-secondary"/>
+                            <Button text="Modifier" onAction="#modifierProduit" styleClass="btn-primary"/>
+                            <Button text="Supprimer" onAction="#supprimerProduit" styleClass="btn-danger"/>
+                        </HBox>
+                    </VBox>
+                </Tab>
+
+            </TabPane>
+        </StackPane>
     </center>
 </BorderPane>
