@@ -14,7 +14,9 @@ Application de gestion de produits (BTP) développée avec **JavaFX**.
 
 ## Aperçu
 
-<img width="1916" height="944" alt="image" src="https://github.com/user-attachments/assets/c95f4c55-172a-4155-9e13-7551845073b4" />
+<img width="1914" height="944" alt="image" src="https://github.com/user-attachments/assets/470eef61-d403-41fc-a8fc-e5139af040aa" />
+<img width="1914" height="944" alt="image" src="https://github.com/user-attachments/assets/1abc209f-6a4e-4278-a528-0cff3671688e" />
+
 
 ## Structure du projet
 
