@@ -8,15 +8,18 @@
            fx:controller="controller.MainController" styleClass="main-background">
     <BorderPane>
 
+        <!-- Sidebar -->
         <left>
             <VBox spacing="12" styleClass="sidebar">
-                <Label text="Gestionnaire" style="-fx-text-fill: white; -fx-font-size: 18px; -fx-font-weight: bold;"/>
+                <Label text="Gestionnaire"
+                       style="-fx-text-fill: white; -fx-font-size: 18px; -fx-font-weight: bold;"/>
                 <Separator/>
                 <Button text="Accueil" onAction="#afficherAccueil" styleClass="sidebar-button"/>
                 <Button text="Produits" onAction="#afficherProduits" styleClass="sidebar-button"/>
             </VBox>
         </left>
 
+        <!-- Centre -->
         <center>
             <TabPane fx:id="tabPane">
 
@@ -24,50 +27,65 @@
                 <Tab text="Accueil" closable="false">
                     <ScrollPane fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED">
                         <content>
-                            <VBox spacing="20">
+                            <VBox spacing="22">
                                 <padding>
                                     <Insets top="20" right="20" bottom="20" left="20"/>
                                 </padding>
 
-                                <!-- KPI -->
+                                <!-- KPI Row -->
                                 <HBox spacing="16">
-                                    <VBox spacing="6" styleClass="kpi-card">
+                                    <VBox spacing="6" styleClass="kpi-card" HBox.hgrow="ALWAYS">
                                         <Label text="Produits" styleClass="kpi-title"/>
                                         <Label fx:id="labelNbProduits" styleClass="kpi-value" text="0"/>
                                     </VBox>
-                                    <VBox spacing="6" styleClass="kpi-card">
+                                    <VBox spacing="6" styleClass="kpi-card" HBox.hgrow="ALWAYS">
                                         <Label text="Valeur totale du stock" styleClass="kpi-title"/>
                                         <Label fx:id="labelValeurTotale" styleClass="kpi-value" text="0 Ar"/>
                                     </VBox>
-                                    <VBox spacing="6" styleClass="kpi-card">
+                                    <VBox spacing="6" styleClass="kpi-card" HBox.hgrow="ALWAYS">
                                         <Label text="Catégorie la plus fréquente" styleClass="kpi-title"/>
                                         <Label fx:id="labelTopCategorie" styleClass="kpi-value" text="-"/>
                                     </VBox>
-                                    <VBox spacing="6" styleClass="kpi-card">
+                                    <VBox spacing="6" styleClass="kpi-card" HBox.hgrow="ALWAYS">
                                         <Label text="Fournisseur principal" styleClass="kpi-title"/>
                                         <Label fx:id="labelTopFournisseur" styleClass="kpi-value" text="-"/>
                                     </VBox>
                                 </HBox>
 
-                                <!-- Alertes + Top fournisseurs -->
-                                <HBox spacing="20">
-                                    <VBox spacing="10" VBox.vgrow="ALWAYS">
-                                        <Label text="Alertes stock bas" styleClass="kpi-title"/>
-                                        <TableView fx:id="tableAlertes" prefHeight="320">
-                                            <columns>
-                                                <TableColumn fx:id="colAlerteNom" text="Produit" prefWidth="220"/>
-                                                <TableColumn fx:id="colAlerteQuantite" text="Quantité" prefWidth="120"/>
-                                            </columns>
-                                        </TableView>
-                                        <Label text="Astuce : double‑cliquez un élément pour l’ouvrir dans l’onglet Produits."
-                                               styleClass="muted"/>
+                                <!-- Zone principale : 2 grandes cards responsive -->
+                                <GridPane hgap="20" vgap="20">
+                                    <columnConstraints>
+                                        <ColumnConstraints percentWidth="60" hgrow="ALWAYS"/>
+                                        <ColumnConstraints percentWidth="40" hgrow="ALWAYS"/>
+                                    </columnConstraints>
+
+                                    <!-- Card : Alertes stock bas -->
+                                    <VBox GridPane.columnIndex="0" spacing="10" styleClass="card">
+                                        <HBox alignment="CENTER_LEFT" styleClass="card-header">
+                                            <Label text="Alertes stock bas" styleClass="card-title"/>
+                                        </HBox>
+                                        <VBox spacing="10" styleClass="card-body" VBox.vgrow="ALWAYS">
+                                            <TableView fx:id="tableAlertes" prefHeight="420" VBox.vgrow="ALWAYS">
+                                                <columns>
+                                                    <TableColumn fx:id="colAlerteNom" text="Produit" prefWidth="380"/>
+                                                    <TableColumn fx:id="colAlerteQuantite" text="Quantité" prefWidth="160"/>
+                                                </columns>
+                                            </TableView>
+                                            <Label text="Astuce : double‑cliquez un élément pour l’ouvrir dans l’onglet Produits."
+                                                   styleClass="muted"/>
+                                        </VBox>
                                     </VBox>
 
-                                    <VBox spacing="10" prefWidth="360">
-                                        <Label text="Top fournisseurs (par quantités)" styleClass="kpi-title"/>
-                                        <ListView fx:id="listTopFournisseurs" prefHeight="320"/>
+                                    <!-- Card : Top fournisseurs -->
+                                    <VBox GridPane.columnIndex="1" spacing="10" styleClass="card">
+                                        <HBox alignment="CENTER_LEFT" styleClass="card-header">
+                                            <Label text="Top fournisseurs (par quantités)" styleClass="card-title"/>
+                                        </HBox>
+                                        <VBox spacing="10" styleClass="card-body" VBox.vgrow="ALWAYS">
+                                            <ListView fx:id="listTopFournisseurs" prefHeight="420" VBox.vgrow="ALWAYS"/>
+                                        </VBox>
                                     </VBox>
-                                </HBox>
+                                </GridPane>
                             </VBox>
                         </content>
                     </ScrollPane>
@@ -92,19 +110,19 @@
 
                         <center>
                             <StackPane>
-                                <TableView fx:id="tableProduits" prefHeight="480">
+                                <TableView fx:id="tableProduits" prefHeight="520">
                                     <columns>
-                                        <TableColumn fx:id="colNom" text="Nom" prefWidth="180"/>
+                                        <TableColumn fx:id="colNom" text="Nom" prefWidth="220"/>
                                         <TableColumn fx:id="colCategorie" text="Catégorie" prefWidth="140"/>
                                         <TableColumn fx:id="colPrix" text="Prix (Ar)" prefWidth="120"/>
-                                        <TableColumn fx:id="colQuantite" text="Quantité" prefWidth="100"/>
-                                        <TableColumn fx:id="colFournisseur" text="Fournisseur" prefWidth="160"/>
+                                        <TableColumn fx:id="colQuantite" text="Quantité" prefWidth="110"/>
+                                        <TableColumn fx:id="colFournisseur" text="Fournisseur" prefWidth="180"/>
                                     </columns>
                                 </TableView>
 
                                 <ScrollPane fx:id="scrollGrille" fitToWidth="true" visible="false">
                                     <content>
-                                        <FlowPane fx:id="grilleProduits" hgap="16" vgap="16" prefWrapLength="900">
+                                        <FlowPane fx:id="grilleProduits" hgap="16" vgap="16" prefWrapLength="1100">
                                             <padding>
                                                 <Insets top="10" right="10" bottom="10" left="10"/>
                                             </padding>

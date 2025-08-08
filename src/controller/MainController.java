@@ -22,69 +22,68 @@ import model.Produit;
 import util.Utils;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
- * Contrôleur principal :
- * - Accueil : KPI + Alertes stock bas + Top fournisseurs
- * - Produits : Tableau + Vue Grille, filtres, CRUD
- * - Prix formatés via Utils.formaterMontant
+ * Accueil : KPI + Alertes + Top fournisseurs
+ * Produits : Tableau/Grille, filtres par catégories RÉELLES ("Granulats", "Liants")
  */
 public class MainController {
 
-    /* Racine pour notifications */
     @FXML private StackPane rootPane;
-
-    /* Navigation */
     @FXML private TabPane tabPane;
 
-    /* KPI Accueil */
+    // KPI Accueil
     @FXML private Label labelNbProduits, labelValeurTotale, labelTopCategorie, labelTopFournisseur;
 
-    /* Accueil – listes utiles (pas de graphes) */
+    // Accueil – listes
     @FXML private TableView<Produit> tableAlertes;
     @FXML private TableColumn<Produit, String>  colAlerteNom;
     @FXML private TableColumn<Produit, Integer> colAlerteQuantite;
     @FXML private ListView<String> listTopFournisseurs;
 
-    /* Produits */
+    // Produits
     @FXML private TableView<Produit> tableProduits;
     @FXML private TableColumn<Produit, String>  colNom, colCategorie, colFournisseur;
     @FXML private TableColumn<Produit, Double>  colPrix;
     @FXML private TableColumn<Produit, Integer> colQuantite;
     @FXML private TextField txtRecherche;
-    @FXML private ComboBox<String> comboFiltre;
+    @FXML private ComboBox<String> comboFiltre; // <- filtre par catégorie réelle
     @FXML private Label labelValeurStock;
 
-    /* Vue Grille */
+    // Vue Grille
     @FXML private Button btnBasculeVue;
     @FXML private ScrollPane scrollGrille;
     @FXML private FlowPane grilleProduits;
 
-    /* Données */
     private final ObservableList<Produit> produits = FXCollections.observableArrayList();
     private FilteredList<Produit> filtered;
     private SortedList<Produit> sorted;
 
-    /* Seuil d’alerte stock bas (modifiable facilement) */
     private static final int SEUIL_STOCK_BAS = 50;
 
-    // ---------------------------------------------------------------------
-    // Initialisation
-    // ---------------------------------------------------------------------
+    // Référentiels
+    private static final List<String> CATEGORIES = Arrays.asList("Granulats", "Liants");
+    private static final List<String> PRODUITS_GRANULATS = Arrays.asList(
+            "Sable fin", "Gravillon", "Gros sable", "Brique", "Moellon", "4/7"
+    );
+    private static final List<String> PRODUITS_LIANTS = Arrays.asList("Fer", "Ciment");
+
     @FXML
     public void initialize() {
-        // Colonnes -> propriétés
+        // Colonnes
         colNom.setCellValueFactory(d -> d.getValue().nomProperty());
         colCategorie.setCellValueFactory(d -> d.getValue().categorieProperty());
         colPrix.setCellValueFactory(d -> d.getValue().prixProperty().asObject());
         colQuantite.setCellValueFactory(d -> d.getValue().quantiteProperty().asObject());
         colFournisseur.setCellValueFactory(d -> d.getValue().fournisseurProperty());
 
-        // Rendu formaté pour la colonne Prix
+        // Prix formaté
         colPrix.setCellFactory(col -> new TableCell<>() {
             @Override protected void updateItem(Double value, boolean empty) {
                 super.updateItem(value, empty);
@@ -92,19 +91,18 @@ public class MainController {
             }
         });
 
-        // Données de démonstration si vide
+        // Données de démo si vide
         if (produits.isEmpty()) {
             produits.addAll(
-                    new Produit("Ciment 32.5R (sacs)", "Ciment", 45000, 120, "Habibo"),
-                    new Produit("Fer torsadé Ø10 (pièces)", "Fer", 32000, 80, "JB Madagascar"),
-                    new Produit("Sable fin (m³)", "Sable fin", 9000, 300, "Local A")
+                    new Produit("Sable fin (m³)", "Granulats", 9000, 300, "Local A"),
+                    new Produit("Gros sable (m³)", "Granulats", 12000, 200, "Local A"),
+                    new Produit("Ciment 32.5R (sacs)", "Liants", 45000, 120, "Habibo"),
+                    new Produit("Fer torsadé Ø10 (pièces)", "Liants", 32000, 80, "JB Madagascar")
             );
         }
 
-        // Filtre de catégories (liste finale)
-        comboFiltre.setItems(FXCollections.observableArrayList(
-                "Sable fin", "Gravillon", "Gros sable", "Brique", "Moellon", "4/7", "Fer", "Ciment"
-        ));
+        // Filtre par CATÉGORIE réelle
+        comboFiltre.setItems(FXCollections.observableArrayList(CATEGORIES));
 
         // Filtres + tri
         filtered = new FilteredList<>(produits, p -> true);
@@ -115,26 +113,20 @@ public class MainController {
         sorted.comparatorProperty().bind(tableProduits.comparatorProperty());
         tableProduits.setItems(sorted);
 
-        // Valeurs initiales
+        // Init tableaux accueil
         mettreAJourValeurStock();
         mettreAJourAccueil();
 
-        // État initial vue Grille
         if (scrollGrille != null) scrollGrille.setVisible(false);
         if (btnBasculeVue != null) btnBasculeVue.setText("Basculer en vue Grille");
     }
 
-    // ---------------------------------------------------------------------
-    // Navigation
-    // ---------------------------------------------------------------------
+    // ---------------- Navigation
     @FXML private void afficherAccueil() { tabPane.getSelectionModel().select(0); mettreAJourAccueil(); }
     @FXML private void afficherProduits() { tabPane.getSelectionModel().select(1); }
 
-    // ---------------------------------------------------------------------
-    // Accueil (KPI + Alertes + Top fournisseurs)
-    // ---------------------------------------------------------------------
+    // ---------------- Accueil
     private void mettreAJourAccueil() {
-        // KPI
         labelNbProduits.setText("Nombre total de produits : " + produits.size());
         double total = produits.stream().mapToDouble(p -> p.getPrix() * p.getQuantite()).sum();
         labelValeurTotale.setText("Valeur totale du stock : " + Utils.formaterMontant(total) + " Ar");
@@ -151,19 +143,20 @@ public class MainController {
                 .map(Map.Entry::getKey).orElse("-");
         labelTopFournisseur.setText("Fournisseur principal : " + topFourn);
 
-        // Alertes stock bas
+        // Alertes
         ObservableList<Produit> bas = FXCollectors.toObservableList(
                 produits.stream()
                         .filter(p -> p.getQuantite() <= SEUIL_STOCK_BAS)
                         .sorted(Comparator.comparingInt(Produit::getQuantite))
         );
+
         if (tableAlertes != null) {
-            if (colAlerteNom != null)     colAlerteNom.setCellValueFactory(d -> d.getValue().nomProperty());
-            if (colAlerteQuantite != null)colAlerteQuantite.setCellValueFactory(d -> d.getValue().quantiteProperty().asObject());
+            if (colAlerteNom != null) colAlerteNom.setCellValueFactory(d -> d.getValue().nomProperty());
+            if (colAlerteQuantite != null) colAlerteQuantite.setCellValueFactory(d -> d.getValue().quantiteProperty().asObject());
             tableAlertes.setItems(bas);
         }
 
-        // Top 5 fournisseurs par quantités
+        // Top fournisseurs (quantités)
         ObservableList<String> top = FXCollectors.toObservableList(
                 produits.stream()
                         .collect(Collectors.groupingBy(Produit::getFournisseur, Collectors.summingInt(Produit::getQuantite)))
@@ -175,17 +168,31 @@ public class MainController {
         if (listTopFournisseurs != null) listTopFournisseurs.setItems(top);
     }
 
-    // ---------------------------------------------------------------------
-    // Filtres Produits
-    // ---------------------------------------------------------------------
+    // ---------------- Filtres Produits
     private void appliquerFiltres() {
         String recherche = txtRecherche.getText() == null ? "" : txtRecherche.getText().toLowerCase().trim();
-        String cat = comboFiltre.getValue();
+        String catFiltre = comboFiltre.getValue(); // "Granulats" | "Liants" | null
 
         filtered.setPredicate(p -> {
             boolean txtOk = p.getNom().toLowerCase().contains(recherche)
                     || p.getFournisseur().toLowerCase().contains(recherche);
-            boolean catOk = (cat == null || cat.isEmpty()) || cat.equalsIgnoreCase(p.getCategorie());
+
+            // Compat rétro : si l’enregistrement porte une "catégorie ancienne" (nom de produit),
+            // on le fait correspondre au filtre choisi.
+            String catProduit = p.getCategorie();
+            boolean catOk;
+            if (catFiltre == null || catFiltre.isEmpty()) {
+                catOk = true;
+            } else if (CATEGORIES.contains(catProduit)) {
+                catOk = catFiltre.equalsIgnoreCase(catProduit);
+            } else {
+                // 'catProduit' n’est pas une vraie catégorie → on mappe
+                if ("Granulats".equals(catFiltre)) {
+                    catOk = PRODUITS_GRANULATS.stream().anyMatch(x -> x.equalsIgnoreCase(catProduit));
+                } else { // "Liants"
+                    catOk = PRODUITS_LIANTS.stream().anyMatch(x -> x.equalsIgnoreCase(catProduit));
+                }
+            }
             return txtOk && catOk;
         });
 
@@ -203,26 +210,16 @@ public class MainController {
         mettreAJourAccueil();
     }
 
-    // ---------------------------------------------------------------------
-    // CRUD
-    // ---------------------------------------------------------------------
+    // ---------------- CRUD
     @FXML private void ajouterProduit() { ouvrirFormulaire(null); }
-
     @FXML private void modifierProduit() {
         Produit sel = tableProduits.getSelectionModel().getSelectedItem();
-        if (sel == null) {
-            Utils.afficherAlerte("Modification", "Veuillez sélectionner un produit.");
-            return;
-        }
+        if (sel == null) { Utils.afficherAlerte("Modification", "Veuillez sélectionner un produit."); return; }
         ouvrirFormulaire(sel);
     }
-
     @FXML private void supprimerProduit() {
         Produit p = tableProduits.getSelectionModel().getSelectedItem();
-        if (p == null) {
-            Utils.afficherAlerte("Suppression", "Aucun produit sélectionné.");
-            return;
-        }
+        if (p == null) { Utils.afficherAlerte("Suppression", "Aucun produit sélectionné."); return; }
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
                 "Supprimer : " + p.getNom() + " ?", ButtonType.OK, ButtonType.CANCEL);
         Optional<ButtonType> res = confirm.showAndWait();
@@ -270,18 +267,14 @@ public class MainController {
         }
     }
 
-    // ---------------------------------------------------------------------
-    // Valeur du stock
-    // ---------------------------------------------------------------------
+    // ---------------- Valeur stock
     private void mettreAJourValeurStock() {
         double total = sorted == null ? 0
                 : sorted.stream().mapToDouble(p -> p.getPrix() * p.getQuantite()).sum();
         labelValeurStock.setText("Valeur du stock : " + Utils.formaterMontant(total) + " Ar");
     }
 
-    // ---------------------------------------------------------------------
-    // Vue Grille
-    // ---------------------------------------------------------------------
+    // ---------------- Vue Grille
     @FXML private void basculerVue() {
         if (scrollGrille == null || tableProduits == null || btnBasculeVue == null) return;
         boolean afficherGrille = !scrollGrille.isVisible();
@@ -312,12 +305,10 @@ public class MainController {
     private VBox creerCarteProduit(Produit p) {
         Label nom = new Label(p.getNom());
         nom.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
-
         Label prix = new Label("Prix : " + Utils.formaterMontant(p.getPrix()) + " Ar");
         Label qte  = new Label("Quantité : " + p.getQuantite());
         Label cat  = new Label("Catégorie : " + p.getCategorie());
         Label frn  = new Label("Fournisseur : " + p.getFournisseur());
-
         VBox v = new VBox(6, nom, prix, qte, cat, frn);
         VBox card = new VBox(10, v);
         card.setStyle("-fx-background-color: white; -fx-background-radius: 12; -fx-padding: 14; "
@@ -328,9 +319,7 @@ public class MainController {
     }
 }
 
-/* =========================================================================
-   Petit utilitaire : convertir un Stream/Collection vers ObservableList
-   ========================================================================= */
+/* Utilitaire : Stream/Collection -> ObservableList */
 class FXCollectors {
     static <T> ObservableList<T> toObservableList(java.util.stream.Stream<T> stream) {
         return stream.collect(FXCollections::observableArrayList,

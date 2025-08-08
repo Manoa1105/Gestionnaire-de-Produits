@@ -303,9 +303,57 @@
 /* Tooltips chart */
 .chart .chart-plot-background { -fx-background-color: transparent; }
 
-/* =========================================================
-   Utilitaires de layout
-   ========================================================= */
-/* Pour l’HBox quantité+unité dans le FXML :
-   <HBox spacing="8" styleClass="quantity-box"> ... </HBox>
-*/
+
+/* -------- Cards génériques (Accueil) -------- */
+.card {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 12;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.10), 18, 0, 0, 6);
+    -fx-padding: 0;
+}
+
+.card-header {
+    -fx-background-color: linear-gradient(to right, #1B5E20, #2E7D32);
+    -fx-background-radius: 12 12 0 0;
+    -fx-padding: 12 16;
+}
+
+.card-title {
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+}
+
+.card-body {
+    -fx-padding: 14;
+    -fx-background-color: #F8FBF8;
+    -fx-background-radius: 0 0 12 12;
+}
+
+/* Texte discret */
+.muted {
+    -fx-text-fill: #6b6b6b;
+    -fx-font-size: 12px;
+}
+
+/* Harmonisation TableView/Liste dans les cards */
+.card .table-view,
+.card .list-view {
+    -fx-background-radius: 8;
+    -fx-background-color: white;
+    -fx-border-color: #DDE7DD;
+    -fx-border-radius: 8;
+}
+
+/* En-tête Table */
+.card .table-view .column-header {
+    -fx-background-color: #4CAF50;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+}
+
+/* Sélection table/liste */
+.card .table-row-cell:filled:selected,
+.card .list-cell:filled:selected {
+    -fx-background-color: #E0F2E9;
+}
