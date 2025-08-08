@@ -1,134 +1,236 @@
 package controller;
 
+import javafx.animation.FadeTransition;
+import javafx.animation.SequentialTransition;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.collections.transformation.FilteredList;
+import javafx.collections.transformation.SortedList;
 import javafx.fxml.FXML;
-import javafx.scene.chart.*;
-import javafx.scene.control.*;
-import javafx.scene.layout.*;
-import javafx.stage.Modality;
-import javafx.stage.Stage;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.*;
+import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
+import javafx.stage.StageStyle;
+import javafx.util.Duration;
 import model.Produit;
+import util.Utils;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.Comparator;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
+/**
+ * Contrôleur principal :
+ * - Accueil : KPI + Alertes stock bas + Top fournisseurs
+ * - Produits : Tableau + Vue Grille, filtres, CRUD
+ * - Prix formatés via Utils.formaterMontant
+ */
 public class MainController {
 
+    /* Racine pour notifications */
+    @FXML private StackPane rootPane;
+
+    /* Navigation */
     @FXML private TabPane tabPane;
 
-    @FXML private Label labelNbProduits;
-    @FXML private Label labelValeurTotale;
-    @FXML private Label labelTopCategorie;
-    @FXML private Label labelTopFournisseur;
+    /* KPI Accueil */
+    @FXML private Label labelNbProduits, labelValeurTotale, labelTopCategorie, labelTopFournisseur;
 
-    @FXML private PieChart pieChartCategories;
-    @FXML private BarChart<String, Number> barChartFournisseurs;
+    /* Accueil – listes utiles (pas de graphes) */
+    @FXML private TableView<Produit> tableAlertes;
+    @FXML private TableColumn<Produit, String>  colAlerteNom;
+    @FXML private TableColumn<Produit, Integer> colAlerteQuantite;
+    @FXML private ListView<String> listTopFournisseurs;
 
+    /* Produits */
     @FXML private TableView<Produit> tableProduits;
-    @FXML private TableColumn<Produit, String> colNom;
-    @FXML private TableColumn<Produit, String> colCategorie;
-    @FXML private TableColumn<Produit, Double> colPrix;
+    @FXML private TableColumn<Produit, String>  colNom, colCategorie, colFournisseur;
+    @FXML private TableColumn<Produit, Double>  colPrix;
     @FXML private TableColumn<Produit, Integer> colQuantite;
-    @FXML private TableColumn<Produit, String> colFournisseur;
-
     @FXML private TextField txtRecherche;
     @FXML private ComboBox<String> comboFiltre;
     @FXML private Label labelValeurStock;
-    @FXML private StackPane rootPane;
 
+    /* Vue Grille */
     @FXML private Button btnBasculeVue;
     @FXML private ScrollPane scrollGrille;
     @FXML private FlowPane grilleProduits;
 
-    private ObservableList<Produit> produits = FXCollections.observableArrayList();
+    /* Données */
+    private final ObservableList<Produit> produits = FXCollections.observableArrayList();
+    private FilteredList<Produit> filtered;
+    private SortedList<Produit> sorted;
 
+    /* Seuil d’alerte stock bas (modifiable facilement) */
+    private static final int SEUIL_STOCK_BAS = 50;
+
+    // ---------------------------------------------------------------------
+    // Initialisation
+    // ---------------------------------------------------------------------
     @FXML
     public void initialize() {
-        colNom.setCellValueFactory(data -> data.getValue().nomProperty());
-        colCategorie.setCellValueFactory(data -> data.getValue().categorieProperty());
-        colPrix.setCellValueFactory(data -> data.getValue().prixProperty().asObject());
-        colQuantite.setCellValueFactory(data -> data.getValue().quantiteProperty().asObject());
-        colFournisseur.setCellValueFactory(data -> data.getValue().fournisseurProperty());
+        // Colonnes -> propriétés
+        colNom.setCellValueFactory(d -> d.getValue().nomProperty());
+        colCategorie.setCellValueFactory(d -> d.getValue().categorieProperty());
+        colPrix.setCellValueFactory(d -> d.getValue().prixProperty().asObject());
+        colQuantite.setCellValueFactory(d -> d.getValue().quantiteProperty().asObject());
+        colFournisseur.setCellValueFactory(d -> d.getValue().fournisseurProperty());
 
-        tableProduits.setItems(produits);
-        mettreAJourValeurStock();
-        mettreAJourDashboard();
+        // Rendu formaté pour la colonne Prix
+        colPrix.setCellFactory(col -> new TableCell<>() {
+            @Override protected void updateItem(Double value, boolean empty) {
+                super.updateItem(value, empty);
+                setText(empty || value == null ? null : Utils.formaterMontant(value) + " Ar");
+            }
+        });
 
+        // Données de démonstration si vide
+        if (produits.isEmpty()) {
+            produits.addAll(
+                    new Produit("Ciment 32.5R (sacs)", "Ciment", 45000, 120, "Habibo"),
+                    new Produit("Fer torsadé Ø10 (pièces)", "Fer", 32000, 80, "JB Madagascar"),
+                    new Produit("Sable fin (m³)", "Sable fin", 9000, 300, "Local A")
+            );
+        }
+
+        // Filtre de catégories (liste finale)
         comboFiltre.setItems(FXCollections.observableArrayList(
-                "Liant", "Acier", "Granulat", "Ciment", "Bois", "Divers"
+                "Sable fin", "Gravillon", "Gros sable", "Brique", "Moellon", "4/7", "Fer", "Ciment"
         ));
 
-        txtRecherche.textProperty().addListener((obs, oldVal, newVal) -> filtrerProduits());
-        comboFiltre.setOnAction(e -> filtrerProduits());
+        // Filtres + tri
+        filtered = new FilteredList<>(produits, p -> true);
+        txtRecherche.textProperty().addListener((o, a, b) -> appliquerFiltres());
+        comboFiltre.setOnAction(e -> appliquerFiltres());
+
+        sorted = new SortedList<>(filtered);
+        sorted.comparatorProperty().bind(tableProduits.comparatorProperty());
+        tableProduits.setItems(sorted);
+
+        // Valeurs initiales
+        mettreAJourValeurStock();
+        mettreAJourAccueil();
+
+        // État initial vue Grille
+        if (scrollGrille != null) scrollGrille.setVisible(false);
+        if (btnBasculeVue != null) btnBasculeVue.setText("Basculer en vue Grille");
     }
 
-    @FXML private void afficherAccueil() {
-        tabPane.getSelectionModel().select(0);
-        mettreAJourDashboard();
+    // ---------------------------------------------------------------------
+    // Navigation
+    // ---------------------------------------------------------------------
+    @FXML private void afficherAccueil() { tabPane.getSelectionModel().select(0); mettreAJourAccueil(); }
+    @FXML private void afficherProduits() { tabPane.getSelectionModel().select(1); }
+
+    // ---------------------------------------------------------------------
+    // Accueil (KPI + Alertes + Top fournisseurs)
+    // ---------------------------------------------------------------------
+    private void mettreAJourAccueil() {
+        // KPI
+        labelNbProduits.setText("Nombre total de produits : " + produits.size());
+        double total = produits.stream().mapToDouble(p -> p.getPrix() * p.getQuantite()).sum();
+        labelValeurTotale.setText("Valeur totale du stock : " + Utils.formaterMontant(total) + " Ar");
+
+        String topCat = produits.stream()
+                .collect(Collectors.groupingBy(Produit::getCategorie, Collectors.counting()))
+                .entrySet().stream().max(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey).orElse("-");
+        labelTopCategorie.setText("Catégorie la plus fréquente : " + topCat);
+
+        String topFourn = produits.stream()
+                .collect(Collectors.groupingBy(Produit::getFournisseur, Collectors.counting()))
+                .entrySet().stream().max(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey).orElse("-");
+        labelTopFournisseur.setText("Fournisseur principal : " + topFourn);
+
+        // Alertes stock bas
+        ObservableList<Produit> bas = FXCollectors.toObservableList(
+                produits.stream()
+                        .filter(p -> p.getQuantite() <= SEUIL_STOCK_BAS)
+                        .sorted(Comparator.comparingInt(Produit::getQuantite))
+        );
+        if (tableAlertes != null) {
+            if (colAlerteNom != null)     colAlerteNom.setCellValueFactory(d -> d.getValue().nomProperty());
+            if (colAlerteQuantite != null)colAlerteQuantite.setCellValueFactory(d -> d.getValue().quantiteProperty().asObject());
+            tableAlertes.setItems(bas);
+        }
+
+        // Top 5 fournisseurs par quantités
+        ObservableList<String> top = FXCollectors.toObservableList(
+                produits.stream()
+                        .collect(Collectors.groupingBy(Produit::getFournisseur, Collectors.summingInt(Produit::getQuantite)))
+                        .entrySet().stream()
+                        .sorted(Map.Entry.<String,Integer>comparingByValue().reversed())
+                        .limit(5)
+                        .map(e -> e.getKey() + " — " + e.getValue() + " unités")
+        );
+        if (listTopFournisseurs != null) listTopFournisseurs.setItems(top);
     }
 
-    @FXML private void afficherProduits() {
-        tabPane.getSelectionModel().select(1);
-    }
+    // ---------------------------------------------------------------------
+    // Filtres Produits
+    // ---------------------------------------------------------------------
+    private void appliquerFiltres() {
+        String recherche = txtRecherche.getText() == null ? "" : txtRecherche.getText().toLowerCase().trim();
+        String cat = comboFiltre.getValue();
 
-    private void filtrerProduits() {
-        String recherche = txtRecherche.getText().toLowerCase().trim();
-        String filtreCategorie = comboFiltre.getValue();
-
-        tableProduits.setItems(produits.filtered(p -> {
-            boolean correspond = p.getNom().toLowerCase().contains(recherche)
+        filtered.setPredicate(p -> {
+            boolean txtOk = p.getNom().toLowerCase().contains(recherche)
                     || p.getFournisseur().toLowerCase().contains(recherche);
-            boolean categorieMatch = (filtreCategorie == null || filtreCategorie.isEmpty())
-                    || filtreCategorie.equalsIgnoreCase(p.getCategorie());
-            return correspond && categorieMatch;
-        }));
+            boolean catOk = (cat == null || cat.isEmpty()) || cat.equalsIgnoreCase(p.getCategorie());
+            return txtOk && catOk;
+        });
+
+        if (isGrilleVisible()) afficherGrilleProduits();
+        mettreAJourValeurStock();
+        mettreAJourAccueil();
     }
 
     @FXML private void reinitialiserFiltres() {
         txtRecherche.clear();
         comboFiltre.getSelectionModel().clearSelection();
-        tableProduits.setItems(produits);
-        if (scrollGrille.isVisible()) afficherGrilleProduits();
+        filtered.setPredicate(p -> true);
+        if (isGrilleVisible()) afficherGrilleProduits();
+        mettreAJourValeurStock();
+        mettreAJourAccueil();
     }
 
-    @FXML private void ajouterProduit() {
-        ouvrirFormulaire(null);
-    }
+    // ---------------------------------------------------------------------
+    // CRUD
+    // ---------------------------------------------------------------------
+    @FXML private void ajouterProduit() { ouvrirFormulaire(null); }
 
     @FXML private void modifierProduit() {
-        Produit selection = tableProduits.getSelectionModel().getSelectedItem();
-        if (selection != null) {
-            ouvrirFormulaire(selection);
-        } else {
-            showAlert("Veuillez sélectionner un produit à modifier.");
+        Produit sel = tableProduits.getSelectionModel().getSelectedItem();
+        if (sel == null) {
+            Utils.afficherAlerte("Modification", "Veuillez sélectionner un produit.");
+            return;
         }
+        ouvrirFormulaire(sel);
     }
 
     @FXML private void supprimerProduit() {
-        Produit produit = tableProduits.getSelectionModel().getSelectedItem();
-        if (produit == null) {
-            showAlert("Aucun produit sélectionné.");
+        Produit p = tableProduits.getSelectionModel().getSelectedItem();
+        if (p == null) {
+            Utils.afficherAlerte("Suppression", "Aucun produit sélectionné.");
             return;
         }
-
-        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-        confirm.setTitle("Confirmation");
-        confirm.setHeaderText("Supprimer ce produit ?");
-        confirm.setContentText(produit.getNom());
-
-        Optional<ButtonType> result = confirm.showAndWait();
-        if (result.isPresent() && result.get() == ButtonType.OK) {
-            produits.remove(produit);
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
+                "Supprimer : " + p.getNom() + " ?", ButtonType.OK, ButtonType.CANCEL);
+        Optional<ButtonType> res = confirm.showAndWait();
+        if (res.isPresent() && res.get() == ButtonType.OK) {
+            produits.remove(p);
             tableProduits.refresh();
-            mettreAJourValeurStock();
-            mettreAJourDashboard();
-            if (scrollGrille.isVisible()) afficherGrilleProduits();
-            showSnackbar("Produit supprimé.");
+            appliquerFiltres();
+            Utils.afficherNotification(rootPane, "Produit supprimé.");
         }
     }
 
@@ -139,141 +241,103 @@ public class MainController {
 
             ProduitFormController controller = loader.getController();
             controller.initialiser(new ProduitFormController.FormCallback() {
-                @Override
-                public void onProduitAjoute(Produit produit) {
+                @Override public void onProduitAjoute(Produit produit) {
                     produits.add(produit);
                     tableProduits.refresh();
-                    mettreAJourValeurStock();
-                    mettreAJourDashboard();
-                    if (scrollGrille.isVisible()) afficherGrilleProduits();
-                    showSnackbar("Produit ajouté avec succès !");
+                    appliquerFiltres();
+                    Utils.afficherNotification(rootPane, "Produit ajouté.");
                 }
-
-                @Override
-                public void onProduitModifie() {
+                @Override public void onProduitModifie() {
                     tableProduits.refresh();
-                    mettreAJourValeurStock();
-                    mettreAJourDashboard();
-                    if (scrollGrille.isVisible()) afficherGrilleProduits();
-                    showSnackbar("Produit modifié avec succès !");
+                    appliquerFiltres();
+                    Utils.afficherNotification(rootPane, "Produit modifié.");
                 }
             }, produitExistant);
 
             Stage modal = new Stage();
-            modal.setScene(new Scene(root));
+            Scene scene = new Scene(root);
+            scene.getStylesheets().add(getClass().getResource("/style/style.css").toExternalForm());
+            modal.initStyle(StageStyle.UNDECORATED);
             modal.initModality(Modality.APPLICATION_MODAL);
-            modal.setTitle(produitExistant != null ? "Modifier Produit" : "Ajouter Produit");
+            modal.setScene(scene);
+            modal.setResizable(false);
+            modal.setTitle(produitExistant != null ? "Modifier un produit" : "Ajouter un produit");
             modal.showAndWait();
 
         } catch (IOException e) {
             e.printStackTrace();
-            showAlert("Erreur lors de l'ouverture du formulaire.");
+            Utils.afficherAlerte("Erreur", "Impossible d’ouvrir le formulaire.\n" + e.getMessage());
         }
     }
 
+    // ---------------------------------------------------------------------
+    // Valeur du stock
+    // ---------------------------------------------------------------------
     private void mettreAJourValeurStock() {
-        double total = produits.stream().mapToDouble(p -> p.getPrix() * p.getQuantite()).sum();
-        labelValeurStock.setText("Valeur du stock : " + String.format("%.0f", total) + " Ar");
+        double total = sorted == null ? 0
+                : sorted.stream().mapToDouble(p -> p.getPrix() * p.getQuantite()).sum();
+        labelValeurStock.setText("Valeur du stock : " + Utils.formaterMontant(total) + " Ar");
     }
 
-    private void mettreAJourDashboard() {
-        labelNbProduits.setText("Nombre total de produits : " + produits.size());
-
-        double total = produits.stream().mapToDouble(p -> p.getPrix() * p.getQuantite()).sum();
-        labelValeurTotale.setText("Valeur totale du stock : " + String.format("%.0f", total) + " Ar");
-
-        String topCat = produits.stream()
-                .collect(Collectors.groupingBy(Produit::getCategorie, Collectors.counting()))
-                .entrySet().stream()
-                .max(Map.Entry.comparingByValue())
-                .map(Map.Entry::getKey).orElse("-");
-        labelTopCategorie.setText("Catégorie la plus fréquente : " + topCat);
-
-        String topFourn = produits.stream()
-                .collect(Collectors.groupingBy(Produit::getFournisseur, Collectors.counting()))
-                .entrySet().stream()
-                .max(Map.Entry.comparingByValue())
-                .map(Map.Entry::getKey).orElse("-");
-        labelTopFournisseur.setText("Fournisseur principal : " + topFourn);
-
-        mettreAJourPieChart();
-        mettreAJourBarChart();
+    // ---------------------------------------------------------------------
+    // Vue Grille
+    // ---------------------------------------------------------------------
+    @FXML private void basculerVue() {
+        if (scrollGrille == null || tableProduits == null || btnBasculeVue == null) return;
+        boolean afficherGrille = !scrollGrille.isVisible();
+        scrollGrille.setVisible(afficherGrille);
+        tableProduits.setVisible(!afficherGrille);
+        btnBasculeVue.setText(afficherGrille ? "Basculer en vue Tableau" : "Basculer en vue Grille");
+        if (afficherGrille) afficherGrilleProduits();
     }
-
-    private void mettreAJourPieChart() {
-        if (pieChartCategories == null) return;
-        pieChartCategories.getData().clear();
-        Map<String, Long> repartition = produits.stream()
-                .collect(Collectors.groupingBy(Produit::getCategorie, Collectors.counting()));
-        repartition.forEach((categorie, count) -> {
-            pieChartCategories.getData().add(new PieChart.Data(categorie, count));
-        });
-    }
-
-    private void mettreAJourBarChart() {
-        if (barChartFournisseurs == null) return;
-        barChartFournisseurs.getData().clear();
-        Map<String, Integer> parFournisseur = produits.stream()
-                .collect(Collectors.groupingBy(Produit::getFournisseur,
-                        Collectors.summingInt(Produit::getQuantite)));
-
-        XYChart.Series<String, Number> serie = new XYChart.Series<>();
-        parFournisseur.forEach((fournisseur, quantite) -> {
-            serie.getData().add(new XYChart.Data<>(fournisseur, quantite));
-        });
-
-        barChartFournisseurs.getData().add(serie);
-    }
-
-    @FXML
-    private void basculerVue() {
-        boolean enGrille = scrollGrille.isVisible();
-        scrollGrille.setVisible(!enGrille);
-        tableProduits.setVisible(enGrille);
-        btnBasculeVue.setText(enGrille ? "🔁 Vue Grille" : "🔁 Vue Tableau");
-
-        if (!enGrille) {
-            afficherGrilleProduits();
-        }
-    }
+    private boolean isGrilleVisible() { return scrollGrille != null && scrollGrille.isVisible(); }
 
     private void afficherGrilleProduits() {
+        if (grilleProduits == null) return;
         grilleProduits.getChildren().clear();
-        for (Produit p : produits) {
-            VBox carte = new VBox(8);
-            carte.getStyleClass().add("carte-produit");
-            carte.setPrefWidth(220);
 
-            Label nom = new Label("🧱 " + p.getNom());
-            nom.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
+        SequentialTransition seq = new SequentialTransition();
+        int i = 0;
+        for (Produit p : sorted) {
+            VBox card = creerCarteProduit(p);
+            grilleProduits.getChildren().add(card);
 
-            Label prix = new Label("💰 " + p.getPrix() + " Ar");
-            Label quantite = new Label("📦 " + p.getQuantite() + " unités");
-            Label categorie = new Label("🏷️ " + p.getCategorie());
-            Label fournisseur = new Label("🚚 " + p.getFournisseur());
-
-            carte.getChildren().addAll(nom, prix, quantite, categorie, fournisseur);
-            grilleProduits.getChildren().add(carte);
+            FadeTransition fade = new FadeTransition(Duration.millis(160), card);
+            fade.setFromValue(0); fade.setToValue(1); fade.setDelay(Duration.millis(60L * i++));
+            seq.getChildren().add(fade);
         }
+        seq.play();
     }
 
-    private void showAlert(String message) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Information");
-        alert.setContentText(message);
-        alert.showAndWait();
-    }
+    private VBox creerCarteProduit(Produit p) {
+        Label nom = new Label(p.getNom());
+        nom.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
 
-    private void showSnackbar(String message) {
-        if (rootPane == null) return;
-        Label msg = new Label(message);
-        msg.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-padding: 10; -fx-background-radius: 5;");
-        rootPane.getChildren().add(msg);
-        new Thread(() -> {
-            try {
-                Thread.sleep(2000);
-            } catch (InterruptedException ignored) {}
-            javafx.application.Platform.runLater(() -> rootPane.getChildren().remove(msg));
-        }).start();
+        Label prix = new Label("Prix : " + Utils.formaterMontant(p.getPrix()) + " Ar");
+        Label qte  = new Label("Quantité : " + p.getQuantite());
+        Label cat  = new Label("Catégorie : " + p.getCategorie());
+        Label frn  = new Label("Fournisseur : " + p.getFournisseur());
+
+        VBox v = new VBox(6, nom, prix, qte, cat, frn);
+        VBox card = new VBox(10, v);
+        card.setStyle("-fx-background-color: white; -fx-background-radius: 12; -fx-padding: 14; "
+                + "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.07), 12, 0, 0, 2);");
+        card.setPrefWidth(240);
+        card.setOpacity(0);
+        return card;
+    }
+}
+
+/* =========================================================================
+   Petit utilitaire : convertir un Stream/Collection vers ObservableList
+   ========================================================================= */
+class FXCollectors {
+    static <T> ObservableList<T> toObservableList(java.util.stream.Stream<T> stream) {
+        return stream.collect(FXCollections::observableArrayList,
+                ObservableList::add,
+                ObservableList::addAll);
+    }
+    static <T> ObservableList<T> toObservableList(java.util.Collection<T> coll) {
+        return FXCollections.observableArrayList(coll);
     }
 }

@@ -17,15 +17,13 @@ public class Produit {
         this.fournisseur.set(fournisseur);
     }
 
-    // ✅ Getters et Setters avec propriétés
-
     public String getNom() { return nom.get(); }
     public void setNom(String nom) { this.nom.set(nom); }
     public StringProperty nomProperty() { return nom; }
 
     public String getCategorie() { return categorie.get(); }
     public void setCategorie(String categorie) { this.categorie.set(categorie); }
-    public StringProperty categorieProperty() { return categorie; } // ✅ Ajouter cette méthode
+    public StringProperty categorieProperty() { return categorie; }
 
     public double getPrix() { return prix.get(); }
     public void setPrix(double prix) { this.prix.set(prix); }

@@ -3,61 +3,48 @@ package util;
 import javafx.animation.FadeTransition;
 import javafx.scene.control.*;
 import javafx.util.Duration;
-import model.Produit;
 
 import java.text.DecimalFormat;
-import java.util.List;
+import java.text.DecimalFormatSymbols;
+import java.util.Locale;
 
 public class Utils {
 
-    // ✅ Valide tous les champs (avec fournisseur inclus)
-    public static boolean validerChamps(TextField nom, ComboBox<String> cat, TextField prix, TextField qte, TextField fournisseur) {
-        return !nom.getText().trim().isEmpty()
-                && cat.getValue() != null
-                && prix.getText().matches("\\d+(\\.\\d+)?")  // nombre décimal
-                && qte.getText().matches("\\d+")            // entier
-                && !fournisseur.getText().trim().isEmpty(); // fournisseur non vide
-    }
-
-    // ✅ Notification discrète avec fade-out
-    public static void notifier(Label label, String message) {
-        label.setOpacity(1.0);
-        label.setText(message);
-        FadeTransition fade = new FadeTransition(Duration.seconds(2), label);
-        fade.setFromValue(1.0);
-        fade.setToValue(0.0);
-        fade.setDelay(Duration.seconds(1));
-        fade.play();
-    }
-
-    // ✅ Vider les champs d’un formulaire
-    public static void viderChamps(TextField nom, ComboBox<String> cat, TextField prix, TextField qte, TextField fournisseur) {
-        nom.clear();
-        cat.getSelectionModel().clearSelection();
-        prix.clear();
-        qte.clear();
-        fournisseur.clear();
-    }
-
-    // ✅ Calcule valeur totale du stock
-    public static double calculerValeurTotale(List<Produit> produits) {
-        return produits.stream()
-                .mapToDouble(p -> p.getPrix() * p.getQuantite())
-                .sum();
-    }
-
-    // ✅ Formate un montant avec séparateur
+    /** Formate un montant avec espace comme séparateur de milliers et SANS décimales. Exemple: 1 500 000 */
     public static String formaterMontant(double montant) {
-        DecimalFormat df = new DecimalFormat("#,##0.00");
-        return df.format(montant).replace(",", " ").replace(".", ",");
+        DecimalFormatSymbols sym = new DecimalFormatSymbols(Locale.FRANCE);
+        sym.setGroupingSeparator(' ');
+        sym.setDecimalSeparator(',');
+        DecimalFormat df = new DecimalFormat("#,##0", sym); // pas de décimales
+        return df.format(montant);
     }
 
-    // ✅ Affiche une alerte JavaFX classique
     public static void afficherAlerte(String titre, String message) {
         Alert alert = new Alert(Alert.AlertType.WARNING);
         alert.setTitle(titre);
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
+    }
+
+    /** Snackbar simple (2s) sur un StackPane parent. */
+    public static void afficherNotification(javafx.scene.layout.StackPane root, String message) {
+        if (root == null) return;
+        Label msg = new Label(message);
+        msg.getStyleClass().addAll("snackbar", "snackbar-label");
+        root.getChildren().add(msg);
+        FadeTransition ft = new FadeTransition(Duration.millis(1800), msg);
+        ft.setFromValue(1); ft.setToValue(0); ft.setDelay(Duration.millis(1200));
+        ft.setOnFinished(e -> root.getChildren().remove(msg));
+        ft.play();
+    }
+
+    /** TextFormatter entier (optionnel si tu veux le remettre). */
+    public static TextFormatter<String> textFormatterEntier() {
+        return new TextFormatter<>(c -> c.getControlNewText().matches("\\d*") ? c : null);
+    }
+    /** TextFormatter décimal (optionnel si tu veux le remettre). */
+    public static TextFormatter<String> textFormatterDecimal() {
+        return new TextFormatter<>(c -> c.getControlNewText().matches("\\d*(\\.\\d*)?") ? c : null);
     }
 }

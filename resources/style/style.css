@@ -1,20 +1,40 @@
-/* ======================== */
-/* 🌿 Palette verte professionnelle */
-/* ======================== */
+/* =========================================================
+   Palette & Base
+   ========================================================= */
+:root {
+    /* JavaFX ne supporte pas les variables CSS standard,
+       mais on centralise les couleurs via commentaires.
+       Vert principal: #2E7D32
+       Vert foncé:    #1B5E20
+       Vert clair:    #43A047
+       Gris clair:    #E8F5E9
+       Gris moyen:    #B2DFDB
+       Gris foncé:    #333333
+       Accent danger: #e53935
+    */
+}
 
-/* 🌐 Fond général */
+/* Fond général */
 .main-background {
     -fx-background-color: #f4fdf5;
     -fx-padding: 20;
 }
 
-/* ☰ Sidebar */
+/* Typographie utilitaire */
+.muted { -fx-text-fill: #5f6a63; }
+
+/* Séparateur doux */
+.separator *.line { -fx-background-color: rgba(0,0,0,0.06); }
+
+/* =========================================================
+   Sidebar
+   ========================================================= */
 .sidebar {
     -fx-background-color: #1B5E20;
     -fx-padding: 20;
     -fx-spacing: 10;
     -fx-background-radius: 0 10 10 0;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.3), 10, 0, 2, 2);
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.25), 12, 0, 2, 2);
 }
 
 .sidebar-button {
@@ -23,79 +43,121 @@
     -fx-font-size: 16px;
     -fx-font-weight: bold;
     -fx-cursor: hand;
+    -fx-background-radius: 6;
+    -fx-padding: 8 12;
 }
-.sidebar-button:hover {
+.sidebar-button:hover,
+.sidebar-button:focused {
     -fx-background-color: #4CAF50;
-    -fx-text-fill: #000000;
-    -fx-background-radius: 5;
+    -fx-text-fill: #071b09;
 }
 
-/* 📋 TableView */
-.table-view {
-    -fx-border-color: #4CAF50;
-    -fx-border-width: 1px;
-    -fx-background-radius: 8;
-    -fx-background-color: white;
+/* =========================================================
+   TabPane
+   ========================================================= */
+.tab-pane *.tab-header-area { -fx-background-color: #E8F5E9; }
+.tab-pane .tab-header-background { -fx-background-color: transparent; }
+.tab-pane .tab-label { -fx-font-weight: bold; }
+
+.tab-pane .tab {
+    -fx-background-insets: 0;
+    -fx-background-radius: 8 8 0 0;
+    -fx-padding: 8 14;
 }
+.tab-pane .tab:selected {
+    -fx-background-color: #ffffff;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 10, 0, 0, 2);
+}
+.tab-pane .tab:hover:not(.selected) { -fx-background-color: rgba(255,255,255,0.65); }
+
+/* =========================================================
+   KPI Cards
+   ========================================================= */
+.kpi-card {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 12;
+    -fx-padding: 16;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 12, 0, 0, 2);
+}
+.kpi-title {
+    -fx-text-fill: #1B5E20;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+}
+.kpi-value {
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+}
+
+/* =========================================================
+   TableView
+   ========================================================= */
+.table-view {
+    -fx-background-color: white;
+    -fx-background-radius: 8;
+    -fx-border-color: #4CAF50;
+    -fx-border-width: 1;
+}
+.table-view .column-header-background { -fx-background-radius: 8 8 0 0; }
 .table-view .column-header {
     -fx-background-color: #4CAF50;
     -fx-text-fill: white;
     -fx-font-weight: bold;
 }
-.table-row-cell:filled:selected {
-    -fx-background-color: #66BB6A;
-}
-.table-row-cell:hover {
-    -fx-background-color: #E8F5E9;
-}
+.table-view .column-header .label { -fx-text-fill: white; }
 
-/* 💬 Label Valeur du Stock */
-.total-label {
-    -fx-font-size: 16px;
-    -fx-font-weight: bold;
-    -fx-text-fill: #1B5E20;
-    -fx-padding: 10 0 10 0;
-}
+.table-row-cell:filled:selected { -fx-background-color: #66BB6A; }
+.table-row-cell:hover { -fx-background-color: #E8F5E9; }
 
-/* 🔘 Boutons */
+/* Alternance de lignes */
+.table-row-cell:odd { -fx-background-color: rgba(0,0,0,0.015); }
+
+/* Cellules alignées à droite pour colonnes numériques (si ajout de styleclass) */
+.cell-right { -fx-alignment: CENTER-RIGHT; }
+
+/* =========================================================
+   Boutons
+   ========================================================= */
 .btn-primary {
     -fx-background-color: #2E7D32;
     -fx-text-fill: #FFFFFF;
     -fx-font-weight: bold;
-    -fx-background-radius: 5;
-    -fx-padding: 8 24;
+    -fx-background-radius: 6;
+    -fx-padding: 8 20;
     -fx-font-size: 14px;
     -fx-cursor: hand;
 }
-.btn-primary:hover {
-    -fx-background-color: #43A047;
-    -fx-text-fill: #ffffff;
-}
+.btn-primary:hover { -fx-background-color: #43A047; }
+.btn-primary:pressed { -fx-background-color: #1f5a23; }
+.btn-primary:disabled { -fx-opacity: 0.6; -fx-cursor: default; }
 
 .btn-secondary {
     -fx-background-color: #607D8B;
     -fx-text-fill: #FFFFFF;
     -fx-font-weight: bold;
-    -fx-background-radius: 5;
-    -fx-padding: 8 16;
+    -fx-background-radius: 6;
+    -fx-padding: 8 14;
 }
-.btn-secondary:hover {
-    -fx-background-color: #78909C;
-}
+.btn-secondary:hover { -fx-background-color: #78909C; }
+.btn-secondary:pressed { -fx-background-color: #546E7A; }
 
 .btn-danger {
     -fx-background-color: #e53935;
     -fx-text-fill: #FFFFFF;
     -fx-font-weight: bold;
-    -fx-background-radius: 5;
-    -fx-padding: 8 16;
+    -fx-background-radius: 6;
+    -fx-padding: 8 14;
 }
-.btn-danger:hover {
-    -fx-background-color: #ff6659;
-}
+.btn-danger:hover { -fx-background-color: #ff6659; }
+.btn-danger:pressed { -fx-background-color: #c62828; }
 
-/* 🧾 Champs de saisie communs */
-.text-field, .combo-box {
+/* Boutons avec icône à gauche (si vous en ajoutez) */
+.button.icon-left .graphic { -fx-padding: 0 8 0 0; }
+
+/* =========================================================
+   Champs de saisie (TextField / ComboBox)
+   ========================================================= */
+.text-field, .combo-box, .password-field {
     -fx-pref-width: 280px;
     -fx-background-color: white;
     -fx-border-color: #B2DFDB;
@@ -106,29 +168,144 @@
     -fx-padding: 8 12;
     -fx-text-fill: #333333;
 }
-.text-field:focused, .combo-box:focused {
+.text-field:focused, .combo-box:focused, .password-field:focused {
     -fx-border-color: #4CAF50;
-    -fx-effect: dropshadow(three-pass-box, rgba(76, 175, 80, 0.3), 6, 0, 0, 0);
+    -fx-effect: dropshadow(three-pass-box, rgba(76, 175, 80, 0.28), 6, 0, 0, 0);
 }
 
-/* ✨ Formulaire Produit */
-.form-container {
-    -fx-background-color: #F3FAF4;
-    -fx-background-radius: 15;
-    -fx-padding: 30;
-    -fx-spacing: 20;
-    -fx-alignment: center;
+/* État d’erreur manuel : ajoutez la classe .invalid au nœud */
+.invalid {
+    -fx-border-color: #e53935 !important;
+    -fx-effect: dropshadow(three-pass-box, rgba(229, 57, 53, 0.28), 6, 0, 0, 0) !important;
 }
 
-.form-title {
-    -fx-font-size: 22px;
+/* ComboBox popup */
+.combo-box .list-cell { -fx-padding: 6 10; }
+.combo-box-popup .list-view {
+    -fx-background-color: white;
+    -fx-background-insets: 0;
+    -fx-padding: 4;
+    -fx-background-radius: 6;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.18), 12, 0, 0, 4);
+}
+.combo-box-popup .list-cell:hover { -fx-background-color: #E8F5E9; }
+
+/* Quantité + Unité (si HBox) */
+.quantity-box .text-field { -fx-pref-width: 120px; }
+.quantity-box .combo-box { -fx-pref-width: 120px; }
+
+/* =========================================================
+   ScrollPane (barres de défilement discrètes)
+   ========================================================= */
+.scroll-pane > .viewport { -fx-background-color: transparent; }
+.scroll-bar:horizontal, .scroll-bar:vertical {
+    -fx-background-color: transparent;
+}
+.scroll-bar:horizontal .thumb, .scroll-bar:vertical .thumb {
+    -fx-background-color: rgba(0,0,0,0.25);
+    -fx-background-insets: 0;
+    -fx-background-radius: 8;
+}
+.scroll-bar:horizontal .thumb:hover, .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: rgba(0,0,0,0.35);
+}
+
+/* =========================================================
+   Grille Produits (cartes)
+   ========================================================= */
+.carte-produit {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 12;
+    -fx-padding: 14;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.07), 12, 0, 0, 2);
+}
+.carte-produit:hover {
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.16), 16, 0, 0, 4);
+}
+.carte-nom {
     -fx-font-weight: bold;
+    -fx-font-size: 14px;
     -fx-text-fill: #1B5E20;
-    -fx-padding: 0 0 10 0;
-    -fx-alignment: center;
 }
 
-/* ✅ Animation fade-in (utilisée via Java si besoin) */
-.fade-in {
-    -fx-opacity: 1;
+/* =========================================================
+   Snackbar
+   ========================================================= */
+.snackbar {
+    -fx-background-color: rgba(33, 33, 33, 0.94);
+    -fx-background-radius: 10;
+    -fx-padding: 10 16;
+    -fx-max-width: 420px;
 }
+.snackbar-label {
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+}
+
+/* =========================================================
+   Modal Ajouter/Modifier (carte)
+   ========================================================= */
+.modal-card {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 14;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.18), 22, 0, 0, 8);
+}
+
+.modal-header {
+    -fx-background-color: linear-gradient(to right, #1B5E20, #2E7D32);
+    -fx-background-radius: 14 14 0 0;
+    -fx-padding: 12 18;
+}
+
+.modal-title {
+    -fx-text-fill: white;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+}
+
+.modal-close {
+    -fx-background-color: transparent;
+    -fx-text-fill: white;
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 8;
+    -fx-padding: 0 6 2 6;
+}
+.modal-close:hover { -fx-background-color: rgba(255,255,255,0.18); }
+
+.modal-body {
+    -fx-background-color: #F7FBF8;
+    -fx-background-radius: 0 0 14 14;
+    -fx-padding: 22;
+}
+
+/* Champs plus larges à l’intérieur du modal */
+.modal-body .text-field, .modal-body .combo-box {
+    -fx-pref-width: 340px;
+}
+
+/* =========================================================
+   Charts (Pie / Bar)
+   ========================================================= */
+.chart-title { -fx-text-fill: #1B5E20; -fx-font-weight: bold; }
+.chart-legend { -fx-background-color: transparent; }
+.axis { -fx-tick-label-fill: #333333; }
+.axis-label { -fx-text-fill: #333333; }
+
+/* Palette de séries (verts harmonisés) */
+.default-color0.chart-pie, .default-color0.chart-bar { -fx-pie-color: #2E7D32; -fx-bar-fill: #2E7D32; }
+.default-color1.chart-pie, .default-color1.chart-bar { -fx-pie-color: #43A047; -fx-bar-fill: #43A047; }
+.default-color2.chart-pie, .default-color2.chart-bar { -fx-pie-color: #66BB6A; -fx-bar-fill: #66BB6A; }
+.default-color3.chart-pie, .default-color3.chart-bar { -fx-pie-color: #1B5E20; -fx-bar-fill: #1B5E20; }
+.default-color4.chart-pie, .default-color4.chart-bar { -fx-pie-color: #81C784; -fx-bar-fill: #81C784; }
+.default-color5.chart-pie, .default-color5.chart-bar { -fx-pie-color: #A5D6A7; -fx-bar-fill: #A5D6A7; }
+
+/* Tooltips chart */
+.chart .chart-plot-background { -fx-background-color: transparent; }
+
+/* =========================================================
+   Utilitaires de layout
+   ========================================================= */
+/* Pour l’HBox quantité+unité dans le FXML :
+   <HBox spacing="8" styleClass="quantity-box"> ... </HBox>
+*/
